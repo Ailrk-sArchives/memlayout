@@ -1,11 +1,12 @@
 # memory layout descrption
 
-Header only lib for creating layout descrption at compile time and runtime.
+Header only library for creating layout descrption for data types.
 
 ### Install
 
 Just grab the `memlayout` folder in to your third party.
 
+-- TODO
 
 ### Example
 ```c++
@@ -23,12 +24,9 @@ struct A {
     int d;
 };
 
-%% namespace memlayout {
-%% template class HasLayout<A>;
-%% template class HasLayout<std::vector<int>>;
-%% } // namespace memlayout
-
 int main(void) {
+
+    // creating a layout descrption at compile time.
     if (auto l1 = Layout::create<int>()) {
         std::cout << to_string(l1.value()) << std::endl;
     }
@@ -42,7 +40,7 @@ int main(void) {
         std::cout << to_string(v.value().layout()) << std::endl;
     }
 
-    // erased type
+    // accessing the layout information from erased type wrapper.
     std::vector<std::any> erased{
         make_some_has_layout(std::vector<int>{ 1, 2, 3 }),
         make_some_has_layout(A{ 10, 2.2, 'a', 12 }), make_some_has_layout(3)
