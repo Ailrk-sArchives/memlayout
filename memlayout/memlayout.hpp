@@ -113,7 +113,7 @@ M_CEXPR decltype(auto) checked_mul(auto x, auto y) {
                       x, y);
 }
 
-} /* namespace memlayout::detail */
+} // namespace memlayout::detail
 
 namespace memlayout {
 using namespace detail;
@@ -245,28 +245,41 @@ class Layout {
 };
 
 //
+// Convinent wrappers to work with value with alignment information.
+// HasLayout and SomeHasLayout are proxy values that holds a pointer to some
+// value along with it's layout descrption. SomeHasLayout is the type erased
+// version that can be used in a polymrphic context.
+//
+// Note neither of them holds the ownership of the value.
+//
+
+//
 // wrap a pointer to a value with it's layout.
 //
 
 template <typename T> class HasLayout {
-    std::unique_ptr<T> value_;
+    T *value_;
     Layout layout_;
 
-    HasLayout(T &&value, Layout layout)
-        : value_(std::make_unique<T>(std::move(value)))
-        , layout_(std::move(layout)) {}
+    HasLayout(T *value)
+        : value_(value)
+        , layout_(Layout::create<T>().value()) {}
 
   public:
-    M_CEXPR static std::optional<HasLayout<T>> create(T &&value) {
-
-        if (auto l = Layout::create<std::remove_cv_t<T>>()) {
-            return { HasLayout<T>(std::forward<T &&>(value), l.value()) };
+    M_CEXPR static std::optional<HasLayout<T>> create(T *value) {
+        if (value == nullptr) {
+            return {};
         }
-        return {};
+        return { HasLayout<T>(std::forward<std::remove_cvref_t<T> *>(value)) };
     }
 
-    M_CEXPR T &ref() { return *value_; }
-    M_CEXPR T get() { return *value_; }
+    M_CEXPR T *ptr() { return value_; }
+    M_CEXPR std::optional<std::reference_wrapper<T>> deref() {
+        if (value_ == nullptr) {
+            return {};
+        }
+        return { *value_ };
+    }
     M_CEXPR Layout layout() { return layout_; }
 };
 
@@ -276,18 +289,24 @@ template <typename T> class HasLayout {
 //
 
 class SomeHasLayout {
-    void *has_layout;
-    Layout (*layout_)(void *);
+    void *value_;
+    Layout layout_;
+
+    template <typename T>
+    inline SomeHasLayout(T *value)
+        : value_(value)
+        , layout_(Layout::create<T>()) {}
 
   public:
-    template <typename T>
-    inline explicit SomeHasLayout(HasLayout<T> &&h)
-        : has_layout(new HasLayout<T>(std::move(h)))
-        , layout_([](void *has_layout) {
-            return static_cast<HasLayout<T> *>(has_layout)->layout();
-        }) {}
+    template <typename T> static std::optional<SomeHasLayout> create(T *value) {
+        if (value == nullptr) {
+            return {};
+        }
+        return { SomeHasLayout(std::forward<std::remove_cvref_t<T> *>(value)) };
+    }
 
-    inline Layout layout() { return layout_(has_layout); }
+    M_CEXPR void *ptr() { return value_; }
+    M_CEXPR Layout layout() { return layout_; }
 };
 
 // smart constructor for HasLayout.
