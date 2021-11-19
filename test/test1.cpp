@@ -1,9 +1,9 @@
-#include "../memlayout/memlayout.hpp"
+#include "../alloy/memlayout.hpp"
 #include <any>
 #include <iostream>
 #include <vector>
 
-using namespace memlayout;
+using namespace alloy;
 
 struct A {
     int a;
